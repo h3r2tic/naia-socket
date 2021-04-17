@@ -23,15 +23,13 @@ use crate::{
     Packet, ServerSocketTrait,
 };
 
-const CLIENT_CHANNEL_SIZE: usize = 8;
-
 /// A socket server which communicates with clients using an underlying
 /// unordered & unreliable network protocol
 #[derive(Debug)]
 pub struct ServerSocket {
     rtc_server: RtcServer,
-    to_client_sender: mpsc::Sender<Packet>,
-    to_client_receiver: mpsc::Receiver<Packet>,
+    to_client_sender: mpsc::UnboundedSender<Packet>,
+    to_client_receiver: mpsc::UnboundedReceiver<Packet>,
 }
 
 impl ServerSocket {
@@ -44,7 +42,7 @@ impl ServerSocket {
 
         debug!("Using port {} for webrtc listener", webrtc_listen_addr);
 
-        let (to_client_sender, to_client_receiver) = mpsc::channel(CLIENT_CHANNEL_SIZE);
+        let (to_client_sender, to_client_receiver) = mpsc::unbounded();
 
         let rtc_server = RtcServer::new(webrtc_listen_addr).await;
 
@@ -141,7 +139,7 @@ fn get_available_port(ip: &str) -> Option<u16> {
 
 fn port_is_available(ip: &str, port: u16) -> bool {
     debug!("Trying to bind to {} {}", ip, port);
-    
+
     match UdpSocket::bind((ip, port)) {
         Ok(_) => {
             debug!("Was able to bind to {} {}", ip, port);
