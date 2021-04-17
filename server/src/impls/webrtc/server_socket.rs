@@ -34,17 +34,13 @@ pub struct ServerSocket {
 
 impl ServerSocket {
     /// Returns a new ServerSocket, listening at the given socket address
-    pub async fn listen(socket_address: SocketAddr) -> Box<dyn ServerSocketTrait> {
-        let webrtc_listen_ip: IpAddr = socket_address.ip();
-        let webrtc_listen_port =
-            get_available_port(webrtc_listen_ip.to_string().as_str()).expect("no available port");
-        let webrtc_listen_addr = SocketAddr::new(webrtc_listen_ip, webrtc_listen_port);
-
-        debug!("Using port {} for webrtc listener", webrtc_listen_addr);
-
+    pub async fn listen(
+        socket_address: SocketAddr,
+        public_address: SocketAddr,
+    ) -> Box<dyn ServerSocketTrait> {
         let (to_client_sender, to_client_receiver) = mpsc::unbounded();
 
-        let rtc_server = RtcServer::new(webrtc_listen_addr).await;
+        let rtc_server = RtcServer::new(socket_address, public_address).await;
 
         let socket = ServerSocket {
             rtc_server,
@@ -154,8 +150,8 @@ struct RtcServer {
 }
 
 impl RtcServer {
-    pub async fn new(address: SocketAddr) -> RtcServer {
-        let inner = InnerRtcServer::new(address, address)
+    pub async fn new(address: SocketAddr, public_address: SocketAddr) -> RtcServer {
+        let inner = InnerRtcServer::new(address, public_address)
             .await
             .expect("could not start RTC server");
 
